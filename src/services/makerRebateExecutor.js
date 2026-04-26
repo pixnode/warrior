@@ -525,6 +525,7 @@ async function monitorUntilFilled(pos, tag, label) {
                     logger.success(`MakerMM${tag}: merge confirmed onchain (RPC reported error but tx went through)`);
                     pos.status = 'done';
                     pos.totalProfit = minShares - (pos.yes.cost + pos.no.cost);
+                    notifyProfit(pos, pos.targetShares);
                     return;
                 }
                 pos.mergeFailCount = (pos.mergeFailCount || 0) + 1;
@@ -617,6 +618,7 @@ async function executeMerge(pos, shares, tag) {
         // Orders are already fully filled at this point — no cancel needed
         logger.money(`MakerMM${tag}: MERGED ${shares.toFixed(4)} shares → $${recovered.toFixed(2)} | cost $${totalCost.toFixed(2)} | P&L $${pos.totalProfit.toFixed(2)}`);
         pos.status = 'done';
+        notifyProfit(pos, pos.targetShares);
     } catch (err) {
         logger.error(`MakerMM${tag}: merge failed — ${err.message}`);
         // Don't change status — let monitor loop continue
@@ -947,7 +949,7 @@ export async function executeMakerRebateStrategy(market) {
 
     // If position was completed inside the monitor loop (merge confirmed)
     if (pos.status === 'done') {
-        notifyProfit(pos, targetShares);
+        notifyProfit(pos, pos.targetShares);
         return { oneSided: false };
     }
 
