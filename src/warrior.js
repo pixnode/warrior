@@ -15,6 +15,7 @@ import { executeMakerRebateStrategy, getMarketOdds } from './services/makerRebat
 import { evaluateSnipe, clearSniperState } from './services/temporalSniper.js';
 
 import { initClient } from './services/client.js';
+import { sendTelegram } from './utils/telegram.js';
 
 const activeMarkets = new Map(); // conditionId -> marketData
 
@@ -62,6 +63,7 @@ async function onNewMarket(market) {
     if (activeMarkets.has(conditionId)) return;
     
     logger.info(`${tag}: New market discovered — "${question.slice(0, 40)}..."`);
+    sendTelegram(`🆕 <b>Market Detected</b>\nAsset: ${asset.toUpperCase()}\n${question.substring(0, 50)}...`);
     activeMarkets.set(conditionId, market);
 
     // Run strategies in parallel
