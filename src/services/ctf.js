@@ -16,7 +16,7 @@ import { proxyFetch } from '../utils/proxy.js';
 
 // ── Contract addresses (Polygon mainnet) ──────────────────────────────────────
 
-export const CTF_ADDRESS = '0x4d97DF1706a066231D27937a092323f46F3A8E97';
+export const CTF_ADDRESS = '0x4D97DCd97eC945f40cF65F87097ACe5EA0476045';
 export const USDC_ADDRESS = '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359'; // Native USDC
 export const CTF_EXCHANGE = '0x4bFb41d5B3570DeFd03C39a9A4D8dE6Bd8B8982E';
 export const NEG_RISK_EXCHANGE = '0xC5d563A36AE78145C45a50134d48A1215220f80a';
