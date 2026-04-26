@@ -941,16 +941,30 @@ export async function executeMakerRebateStrategy(market) {
     await monitorUntilFilled(pos, tag, label);
     activePositions.delete(conditionId);
 
+    // If position was completed inside the monitor loop (merge confirmed)
+    if (pos.status === 'done') {
+        notifyProfit(pos, targetShares);
+        return { oneSided: false };
+    }
+
     // If holding a single-sided position (expensive filled, cheap cancelled) — wait and redeem
     if (pos.holdingSide) {
         await waitAndRedeem(pos, tag);
         return { oneSided: false }; // not a stuck one-sided cycle, intentional hold
     }
 
+    return { oneSided: pos.oneSided ?? false };
+}
+
+/**
+ * Sends the final profit report to Telegram and logs to CSV
+ */
+function notifyProfit(pos, targetShares) {
+    const tag = `[${pos.asset.toUpperCase()}]`;
     const sign = pos.totalProfit >= 0 ? '+' : '';
     const combinedPrice = (pos.yes.buyPrice + pos.no.buyPrice).toFixed(3);
     
-    // Notify Telegram with detailed breakdown
+    // Notify Telegram
     sendTelegram(
         `💰 <b>Profit Cycle Done</b>\n` +
         `━━━━━━━━━━━━━━━\n` +
@@ -973,6 +987,4 @@ export async function executeMakerRebateStrategy(market) {
         shares: targetShares,
         pnl: pos.totalProfit
     });
-
-    return { oneSided: pos.oneSided ?? false };
 }
