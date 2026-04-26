@@ -14,8 +14,13 @@ const config = {
   // Polymarket API Key Map (proxyWallet -> credentials)
   polyClobApiKeyMap: (() => {
     try {
-      return process.env.POLY_CLOB_API_KEY_MAP ? JSON.parse(process.env.POLY_CLOB_API_KEY_MAP) : {};
+      const raw = process.env.POLY_CLOB_API_KEY_MAP;
+      if (!raw) return {};
+      // Remove any surrounding quotes that might have been added by accident
+      const clean = raw.trim().replace(/^['"]|['"]$/g, '');
+      return JSON.parse(clean);
     } catch (e) {
+      console.error('❌ Failed to parse POLY_CLOB_API_KEY_MAP:', e.message);
       return {};
     }
   })(),

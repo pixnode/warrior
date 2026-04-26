@@ -42,18 +42,19 @@ export async function initClient() {
             secret: credsMap[matchedKey].secret,
             passphrase: credsMap[matchedKey].passphrase,
         };
-        logger.info(`Using API credentials from POLY_CLOB_API_KEY_MAP for proxy wallet ${config.proxyWallet}`);
+        logger.info(`✅ Matched credentials in POLY_CLOB_API_KEY_MAP for wallet ${config.proxyWallet}`);
     } else if (config.clobApiKey && config.clobApiSecret && config.clobApiPassphrase) {
         apiCreds = {
             key: config.clobApiKey,
             secret: config.clobApiSecret,
             passphrase: config.clobApiPassphrase,
         };
-        logger.info('Using API credentials from .env');
+        logger.info('ℹ️ Using fallback API credentials from .env');
     } else {
+        logger.info('⚠️ No API credentials found, attempting to derive...');
         const tempClient = new ClobClient(config.clobHost, config.chainId, signer);
         apiCreds = await tempClient.createOrDeriveApiKey();
-        logger.info('API credentials derived successfully');
+        logger.info('✅ API credentials derived successfully');
     }
 
     // Step 2: Initialize full trading client
