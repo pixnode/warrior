@@ -15,6 +15,7 @@ import { getClient } from './client.js';
 import { Side, OrderType } from '@polymarket/clob-client';
 import { sendTelegram } from '../utils/telegram.js';
 import { logToCsv } from '../utils/csvLogger.js';
+import { proxyFetch } from '../utils/proxy.js';
 
 const activeSnipes = new Map(); // conditionId -> { hasUp, hasDown }
 
@@ -34,17 +35,22 @@ async function trackSnipeOutcome(market, side, buyPrice, shares) {
     logger.info(`${tag}: Checking outcome for snipe in "${question.slice(0, 30)}..."`);
 
     try {
-        const client = getClient();
-        const tokenId = side === 'UP' ? market.yesTokenId : market.noTokenId;
-        
-        // In real trading, we could check on-chain balance, 
-        // but for both SIM and LIVE, checking the final price or resolution is more universal.
-        // We'll use the Gamma API to see which side won.
-        const response = await fetch(`${config.gammaHost}/markets/${market.marketId || market.id}`);
-        const data = await response.json();
+        const url = `${config.gammaHost}/markets/${market.marketId || market.id}`;
+        logger.info(`${tag}: Checking resolution via ${url}`);
 
-        if (data && data.resolved) {
-            const winner = data.outcome; // "0" for YES/UP usually, "1" for NO/DOWN
+        const response = await proxyFetch(url);
+        if (!response.ok) {
+            logger.warn(`${tag}: Failed to fetch market status (${response.status}) — retrying in 60s`);
+            setTimeout(() => trackSnipeOutcome(market, side, buyPrice, shares), 60000);
+            return;
+        }
+
+        const data = await response.json();
+        
+        if (data && (data.resolved || data.status === 'resolved')) {
+            const winner = data.outcome; 
+            logger.info(`${tag}: Market resolved! Winner outcome index: ${winner}`);
+            
             const didWin = (side === 'UP' && winner === "0") || (side === 'DOWN' && winner === "1");
             
             const pnl = didWin ? (shares * (1 - buyPrice)) : (shares * -buyPrice);
