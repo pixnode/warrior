@@ -17,7 +17,7 @@ import { sendTelegram } from '../utils/telegram.js';
 import { logToCsv } from '../utils/csvLogger.js';
 import { proxyFetch } from '../utils/proxy.js';
 
-const activeSnipes = new Map(); // conditionId -> { hasUp, hasDown }
+const firedSnipes = new Set(); // Set of "conditionId-side" to ensure absolute 1-shot limit
 
 /**
  * Track the outcome of a snipe after the market closes
@@ -166,22 +166,20 @@ export async function evaluateSnipe(market, event) {
         return;
     }
 
-    if (!activeSnipes.has(conditionId)) {
-        activeSnipes.set(conditionId, { hasUp: false, hasDown: false });
-        logger.info(`[SNIPER-${asset.toUpperCase()}]: Entered Sniping Zone (T-${tMinus}s)`);
-    }
-
-    const state = activeSnipes.get(conditionId);
     const tasks = [];
 
-    if (!state.hasUp && up_ask > 0 && up_ask <= config.warriorSniperOdds) {
-        state.hasUp = true;
-        tasks.push(fireSnipe(market, 'UP', up_ask, config.warriorSniperShares).then(res => { if (!res.success) state.hasUp = false; }));
+    // UP Snipe check
+    const upKey = `${conditionId}-UP`;
+    if (!firedSnipes.has(upKey) && up_ask > 0 && up_ask <= config.warriorSniperOdds) {
+        firedSnipes.add(upKey); // Hard Lock IMMEDIATELY
+        tasks.push(fireSnipe(market, 'UP', up_ask, config.warriorSniperShares));
     }
 
-    if (!state.hasDown && down_ask > 0 && down_ask <= config.warriorSniperOdds) {
-        state.hasDown = true;
-        tasks.push(fireSnipe(market, 'DOWN', down_ask, config.warriorSniperShares).then(res => { if (!res.success) state.hasDown = false; }));
+    // DOWN Snipe check
+    const downKey = `${conditionId}-DOWN`;
+    if (!firedSnipes.has(downKey) && down_ask > 0 && down_ask <= config.warriorSniperOdds) {
+        firedSnipes.add(downKey); // Hard Lock IMMEDIATELY
+        tasks.push(fireSnipe(market, 'DOWN', down_ask, config.warriorSniperShares));
     }
 
     if (tasks.length > 0) await Promise.all(tasks);
