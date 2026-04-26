@@ -347,8 +347,8 @@ async function monitorUntilFilled(pos, tag, label) {
         const maxFastChecks = 10; // 1s polling for first 10s
 
         while (true) {
-            // Safety guard: exit immediately if resolved by any path
-            if (pos.status === 'done') return;
+            // Safety guard: exit immediately if resolved or merging
+            if (pos.status === 'done' || pos.status === 'merging') return;
 
             // ── Onchain balance — source of truth, checked FIRST ──────────────
             const [yesBal, noBal] = await Promise.all([
@@ -525,7 +525,7 @@ async function monitorUntilFilled(pos, tag, label) {
                     logger.success(`MakerMM${tag}: merge confirmed onchain (RPC reported error but tx went through)`);
                     pos.status = 'done';
                     pos.totalProfit = minShares - (pos.yes.cost + pos.no.cost);
-                    notifyProfit(pos, pos.targetShares);
+                    // notifyProfit(pos, pos.targetShares); // Moved to end of strategy
                     return;
                 }
                 pos.mergeFailCount = (pos.mergeFailCount || 0) + 1;
@@ -613,6 +613,7 @@ async function executeMerge(pos, shares, tag) {
     pos.totalProfit = recovered - totalCost;
 
     try {
+        pos.status = 'merging'; // Set status immediately to block the monitor loop from re-triggering
         logger.info(`MakerMM${tag}: sending merge transaction to blockchain...`);
         
         // Immediate notification that merge is in progress (REMOVED PER USER REQUEST)
@@ -623,8 +624,9 @@ async function executeMerge(pos, shares, tag) {
         // Orders are already fully filled at this point — no cancel needed
         logger.money(`MakerMM${tag}: MERGED ${shares.toFixed(4)} shares → $${recovered.toFixed(2)} | cost $${totalCost.toFixed(2)} | P&L $${pos.totalProfit.toFixed(2)}`);
         pos.status = 'done';
-        notifyProfit(pos, pos.targetShares);
+        // notifyProfit(pos, pos.targetShares); // Moved to end of strategy
     } catch (err) {
+        pos.status = 'monitoring'; // Restore status on failure so monitor loop can retry
         logger.error(`MakerMM${tag}: merge failed — ${err.message}`);
         // Don't change status — let monitor loop continue
     }
@@ -971,6 +973,9 @@ export async function executeMakerRebateStrategy(market) {
  * Sends the final profit report to Telegram and logs to CSV
  */
 function notifyProfit(pos, targetShares) {
+    if (pos.notified) return; // Prevent duplicate notifications
+    pos.notified = true;
+    
     const tag = `[${pos.asset.toUpperCase()}]`;
     const sign = pos.totalProfit >= 0 ? '+' : '';
     const combinedPrice = (pos.yes.buyPrice + pos.no.buyPrice).toFixed(3);
