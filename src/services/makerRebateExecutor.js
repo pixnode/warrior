@@ -457,20 +457,18 @@ async function monitorUntilFilled(pos, tag, label) {
                 const yesGhost = !config.dryRun && pos.yes.clobFilled && yesShares < pos.targetShares * 0.99;
                 const noGhost  = !config.dryRun && pos.no.clobFilled  && noShares  < pos.targetShares * 0.99;
 
-                if (yesGhost || noGhost) {
-                    if (!pos.ghostFillSince) pos.ghostFillSince = nowMs;
-                    const waitedSec = Math.round((nowMs - pos.ghostFillSince) / 1000);
-                    if (waitedSec >= 30) {
-                        // 30s is enough to distinguish settlement delay from ghost fill.
-                        // Act now while market prices are still fair — don't wait for cut-loss.
-                        await recoverFromGhostFill(pos, yesShares, noShares, tag);
+                    if (waitedSec >= 300) {
+                        // 5 minutes is way past any RPC delay — it's a permanent ghost fill.
+                        logger.error(`MakerMM${tag}: PERMANENT ghost fill (0 tokens after 5m) — giving up on this market`);
+                        pos.status = 'ghosted';
                         return;
-                    } else {
+                    } else if (nowMs - (pos.lastGhostLog || 0) >= 30_000) {
+                        pos.lastGhostLog = nowMs;
                         logger.info(
                             `MakerMM${tag}: ghost fill suspected ` +
                             `(YES CLOB=${pos.yes.clobFilled} onchain=${yesShares.toFixed(4)}, ` +
                             `NO CLOB=${pos.no.clobFilled} onchain=${noShares.toFixed(4)}) ` +
-                            `— waiting ${waitedSec}s / 30s`
+                            `— waiting ${waitedSec}s / 300s`
                         );
                     }
                 }
@@ -483,14 +481,15 @@ async function monitorUntilFilled(pos, tag, label) {
                 if (!pos.bothFilledSince) pos.bothFilledSince = Date.now();
                 const waitedSec = Math.round((Date.now() - pos.bothFilledSince) / 1000);
                 if (waitedSec >= 15) {
-                    logger.warn(
-                        `MakerMM${tag}: both sides WS-filled but onchain shows YES=${yesShares} NO=${noShares} after ${waitedSec}s ` +
-                        `— RPC may be stale, merging with target ${pos.targetShares} shares`
-                    );
-                    await executeMerge(pos, pos.targetShares, tag);
-                    if (pos.status === 'done') return;
-                } else {
-                    logger.info(`MakerMM${tag}: both WS-filled, waiting for onchain confirmation (${waitedSec}s / 15s grace)...`);
+                    if (nowMs - (pos.lastStaleLog || 0) >= 60_000) {
+                        pos.lastStaleLog = nowMs;
+                        logger.warn(`MakerMM${tag}: both sides WS-filled but onchain still 0 after ${waitedSec}s — RPC may be stale`);
+                    }
+                    if (waitedSec >= 600) {
+                        logger.error(`MakerMM${tag}: RPC stale timeout (10m) — market likely ghosted. Giving up.`);
+                        pos.status = 'ghosted';
+                        return;
+                    }
                 }
             }
 
