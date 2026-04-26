@@ -209,7 +209,7 @@ async function recoverFromGhostFill(pos, yesShares, noShares, tag) {
 
     if (mergeable >= 1) {
         try {
-            await mergePositions(pos.conditionId, mergeable, pos.negRisk);
+            await mergePositions(pos.conditionId, mergeable, pos.yes.tokenId, pos.no.tokenId);
             mergeRecovered = mergeable;
             logger.money(`MakerMM${tag}: ghost recovery merge ${mergeable.toFixed(4)} pairs → $${mergeRecovered.toFixed(2)}`);
         } catch (err) {
@@ -608,7 +608,7 @@ async function executeMerge(pos, shares, tag) {
     pos.totalProfit = recovered - totalCost;
 
     try {
-        await mergePositions(pos.conditionId, shares, pos.negRisk);
+        await mergePositions(pos.conditionId, shares, pos.yes.tokenId, pos.no.tokenId);
 
         // Orders are already fully filled at this point — no cancel needed
         logger.money(`MakerMM${tag}: MERGED ${shares.toFixed(4)} shares → $${recovered.toFixed(2)} | cost $${totalCost.toFixed(2)} | P&L $${pos.totalProfit.toFixed(2)}`);

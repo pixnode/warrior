@@ -408,9 +408,11 @@ export async function splitPosition(conditionId, amountUsdc, negRisk = false) {
  *
  * @param  {string} conditionId   - Market conditionId
  * @param  {number} sharesPerSide - How many tokens to merge (must be equal on both sides)
+ * @param  {string|ethers.BigNumber} yesTokenId - ID for YES token
+ * @param  {string|ethers.BigNumber} noTokenId - ID for NO token
  * @returns {number} recoveredUsdc - USDC recovered (= sharesPerSide)
  */
-export async function mergePositions(conditionId, sharesPerSide) {
+export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noTokenId) {
     if (config.dryRun) {
         const recovered = sharesPerSide;
         logger.info(`MM[SIM]: merge ${sharesPerSide} YES+NO → $${recovered} USDC recovered`);
@@ -431,13 +433,10 @@ export async function mergePositions(conditionId, sharesPerSide) {
     const ctf = new ethers.Contract(CTF_ADDRESS, CTF_ABI, provider);
     
     try {
-        const [yesId, noId] = await Promise.all([
-            getTokenId(conditionId, 0),
-            getTokenId(conditionId, 1),
-        ]);
+        // Use provided tokenIds directly to check balance
         const [bYes, bNo] = await Promise.all([
-            ctf.balanceOf(config.proxyWallet, yesId),
-            ctf.balanceOf(config.proxyWallet, noId),
+            ctf.balanceOf(config.proxyWallet, yesTokenId),
+            ctf.balanceOf(config.proxyWallet, noTokenId),
         ]);
         
         const minOnchain = bYes.lt(bNo) ? bYes : bNo;
@@ -585,7 +584,9 @@ export async function cleanupOpenPositions(clobClient) {
             logger.warn(`MM: merging ${minShares.toFixed(3)} YES+NO → USDC for ${conditionId.slice(0, 10)}...`);
 
             if (!config.dryRun) {
-                await mergePositions(conditionId, minShares);
+                const yesTokenId = tokens[0]?.tokenId;
+                const noTokenId = tokens[1]?.tokenId;
+                await mergePositions(conditionId, minShares, yesTokenId, noTokenId);
                 mergedCount++;
             } else {
                 logger.info(`MM[SIM]: would merge ${minShares.toFixed(3)} shares for ${conditionId.slice(0, 10)}...`);
