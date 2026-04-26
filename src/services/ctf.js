@@ -432,8 +432,6 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
     const provider = await getPolygonProvider();
     const ctf = new ethers.Contract(CTF_ADDRESS, CTF_ABI, provider);
     
-    try {
-        // Use provided tokenIds directly to check balance
     const ctfIface = new ethers.utils.Interface(CTF_ABI);
     
     // Try Native USDC first, then fall back to USDC.e
