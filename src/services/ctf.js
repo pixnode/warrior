@@ -453,19 +453,36 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
     }
 
     const ctfIface = new ethers.utils.Interface(CTF_ABI);
-    const data = ctfIface.encodeFunctionData('mergePositions', [
-        USDC_ADDRESS,
-        ethers.constants.HashZero,
-        conditionId,
-        [1, 2],
-        amountToMerge,
-    ]);
+    
+    // Try Native USDC first, then fall back to USDC.e
+    const usdcOptions = [
+        '0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359', // Native USDC
+        '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', // USDC.e
+    ];
 
-    logger.info(`MM: merging ${ethers.utils.formatUnits(amountToMerge, 6)} pairs for condition ${conditionId.slice(0, 12)}...`);
-    await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 800_000 });
-    const recovered = parseFloat(ethers.utils.formatUnits(amountToMerge, 6));
-    logger.success(`MM: merged — recovered $${recovered.toFixed(4)} USDC`);
-    return recovered;
+    let lastError = null;
+    for (const usdc of usdcOptions) {
+        try {
+            logger.info(`MM: attempting merge with collateral ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'}...`);
+            const data = ctfIface.encodeFunctionData('mergePositions', [
+                usdc,
+                ethers.constants.HashZero,
+                conditionId,
+                [1, 2],
+                amountToMerge,
+            ]);
+
+            await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 800_000 });
+            const recovered = parseFloat(ethers.utils.formatUnits(amountToMerge, 6));
+            logger.success(`MM: merged with ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'} — recovered $${recovered.toFixed(4)} USDC`);
+            return recovered;
+        } catch (err) {
+            lastError = err;
+            logger.warn(`MM: merge with ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'} failed, trying fallback...`);
+        }
+    }
+
+    throw lastError || new Error('Merge failed with all USDC variants');
 }
 
 /**
