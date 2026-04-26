@@ -33,17 +33,16 @@ Key parameters:
 - `POLYGON_RPC_URL`: Recommended Private RPC (Alchemy/QuickNode).
 
 ### 3. Running the Bot
-**Simulation (Recommended first):**
-Set `DRY_RUN=true` in `.env`, then run:
+**Mode Standar (Log Teks - Rekomendasi VPS/PM2):**
 ```bash
 npm run warrior
 ```
 
-**Live Trading:**
-Set `DRY_RUN=false` in `.env`, then run:
+**Mode Dashboard (Grafis TUI - Rekomendasi PC Lokal):**
 ```bash
-npm run warrior
+npm run warrior-tui
 ```
+*Gunakan `npm run warrior-tui-sim` untuk mencoba tampilan dashboard dalam mode simulasi.*
 
 ## 📊 Strategy Overview
 
