@@ -472,7 +472,7 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
                 amountToMerge,
             ]);
 
-            await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 800_000 });
+            const receipt = await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 2_000_000 });
             const recovered = parseFloat(ethers.utils.formatUnits(amountToMerge, 6));
             logger.success(`MM: merged with ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'} — recovered $${recovered.toFixed(4)} USDC`);
             return recovered;
