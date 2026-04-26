@@ -7,9 +7,12 @@ import logger from './logger.js';
  */
 export async function sendTelegram(text) {
     if (!config.telegramToken || !config.telegramChatId) {
+        console.log(`[DEBUG] Telegram skipped: TOKEN=${!!config.telegramToken}, ID=${!!config.telegramChatId}`);
         logger.warn('Telegram notification skipped: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not configured.');
         return;
     }
+
+    console.log(`[DEBUG] Sending Telegram message: ${text.substring(0, 50)}...`);
 
     const url = `https://api.telegram.org/bot${config.telegramToken}/sendMessage`;
     const body = {

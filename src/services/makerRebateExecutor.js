@@ -616,8 +616,9 @@ async function executeMerge(pos, shares, tag) {
         pos.status = 'merging'; // Set status immediately to block the monitor loop from re-triggering
         logger.info(`MakerMM${tag}: sending merge transaction to blockchain...`);
         
-        // Immediate notification that merge is in progress (REMOVED PER USER REQUEST)
-        // sendTelegram(`⏳ <b>Merge In Progress</b>\n🆔 ${pos.question.substring(0, 20)}...\n📦 ${shares.toFixed(2)} shares`);
+        // Send profit notification IMMEDIATELY after fill detection to provide instant feedback
+        console.log(`[DEBUG] MakerMM${tag}: Triggering notifyProfit for ${pos.question.substring(0, 20)}...`);
+        notifyProfit(pos, pos.targetShares);
 
         await mergePositions(pos.conditionId, shares, pos.yes.tokenId, pos.no.tokenId);
 
@@ -956,7 +957,7 @@ export async function executeMakerRebateStrategy(market) {
 
     // If position was completed inside the monitor loop (merge confirmed)
     if (pos.status === 'done') {
-        notifyProfit(pos, pos.targetShares);
+        // notifyProfit(pos, pos.targetShares); // Now called earlier in executeMerge
         return { oneSided: false };
     }
 
