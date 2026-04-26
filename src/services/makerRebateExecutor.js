@@ -490,6 +490,7 @@ async function monitorUntilFilled(pos, tag, label) {
                         pos.status = 'ghosted';
                         return;
                     }
+                    await sleep(5000);
                 }
             }
 
