@@ -51,7 +51,7 @@ sudo npm install -g pm2
 pm2 start src/warrior.js --name "warrior"
 
 # Cek log secara real-time
-pm2 logs warrior-bot
+pm2 logs warrior
  
 
 ## 📊 Strategy Overview

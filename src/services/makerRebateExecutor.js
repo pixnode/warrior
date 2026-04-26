@@ -615,8 +615,8 @@ async function executeMerge(pos, shares, tag) {
     try {
         logger.info(`MakerMM${tag}: sending merge transaction to blockchain...`);
         
-        // Immediate notification that merge is in progress
-        sendTelegram(`⏳ <b>Merge In Progress</b>\n🆔 ${pos.question.substring(0, 20)}...\n📦 ${shares.toFixed(2)} shares`);
+        // Immediate notification that merge is in progress (REMOVED PER USER REQUEST)
+        // sendTelegram(`⏳ <b>Merge In Progress</b>\n🆔 ${pos.question.substring(0, 20)}...\n📦 ${shares.toFixed(2)} shares`);
 
         await mergePositions(pos.conditionId, shares, pos.yes.tokenId, pos.no.tokenId);
 
@@ -977,14 +977,14 @@ function notifyProfit(pos, targetShares) {
     
     // Notify Telegram
     sendTelegram(
-        `💰 <b>Profit Cycle Done</b>\n` +
+        `🛡️ WARRIOR: 💰 Profit Cycle Done\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `🆔 <b>Window:</b> ${pos.question.substring(0, 30)}...\n` +
-        `📊 <b>Entry YES:</b> $${pos.yes.buyPrice.toFixed(3)}\n` +
-        `📊 <b>Entry NO :</b> $${pos.no.buyPrice.toFixed(3)}\n` +
-        `💵 <b>Combined:</b> $${combinedPrice}\n` +
-        `📈 <b>Net P&L :</b> ${sign}$${pos.totalProfit.toFixed(2)}\n` +
-        `📦 <b>Shares  :</b> ${targetShares}\n` +
+        `🆔 Window: ${pos.question.substring(0, 30)}...\n` +
+        `📊 Entry YES: $${pos.yes.buyPrice.toFixed(3)}\n` +
+        `📊 Entry NO : $${pos.no.buyPrice.toFixed(3)}\n` +
+        `💵 Combined: $${combinedPrice}\n` +
+        `📈 Net P&L : ${sign}$${pos.totalProfit.toFixed(2)}\n` +
+        `📦 Shares  : ${targetShares}\n` +
         `━━━━━━━━━━━━━━━`
     );
 

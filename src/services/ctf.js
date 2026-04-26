@@ -467,6 +467,7 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
             }
 
             logger.info(`MM: attempting merge with collateral ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'}...`);
+            
             const data = ctfIface.encodeFunctionData('mergePositions', [
                 usdc,
                 ethers.constants.HashZero,
@@ -475,13 +476,22 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
                 currentAmountToMerge,
             ]);
 
-            await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 2_000_000 });
-            const recovered = parseFloat(ethers.utils.formatUnits(currentAmountToMerge, 6));
-            logger.success(`MM: merged with ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'} — recovered $${recovered.toFixed(4)} USDC`);
-            return recovered;
+            try {
+                await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 2_000_000 });
+                const recovered = parseFloat(ethers.utils.formatUnits(currentAmountToMerge, 6));
+                logger.success(`MM: merged with ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'} — recovered $${recovered.toFixed(4)} USDC`);
+                return recovered;
+            } catch (mergeErr) {
+                // If it failed with HashZero, it might be a NegRisk market that needs a specific parent.
+                // For Polymarket NegRisk, sometimes the conditionId itself or a derived hash is needed.
+                // However, most often it's just HashZero but the index sets might be different.
+                // Let's log the specific error to help debug.
+                logger.warn(`MM: merge attempt failed — ${mergeErr.message}`);
+                throw mergeErr;
+            }
         } catch (err) {
             lastError = err;
-            logger.warn(`MM: merge with ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'} failed, trying fallback...`);
+            logger.warn(`MM: merge sequence failed for ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'}, trying next...`);
         }
     }
 
