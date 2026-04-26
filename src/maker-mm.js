@@ -18,6 +18,7 @@ import { startMMDetector, stopMMDetector, checkCurrentMarket } from './services/
 import { executeMakerRebateStrategy, getActiveMakerPositions } from './services/makerRebateExecutor.js';
 import { mmFillWatcher } from './services/mmWsFillWatcher.js';
 import { getUsdcBalance } from './services/client.js';
+import { cleanupOpenPositions } from './services/ctf.js';
 
 // ── Validate config ────────────────────────────────────────────────────────────
 
@@ -214,6 +215,18 @@ process.on('SIGTERM', shutdown);
 
 logger.info(`MakerMM bot starting — ${config.dryRun ? 'SIMULATION MODE' : 'LIVE MODE'} | assets: ${config.makerMmAssets.join(', ').toUpperCase()} | ${config.makerMmDuration}`);
 startRefresh();
+
+// ── Startup cleanup ──────────────────────────────────────────────────────────
+// Scan for leftover positions and merge them back to USDC
+if (!config.dryRun) {
+    try {
+        const client = await getClient();
+        await cleanupOpenPositions(client);
+    } catch (err) {
+        logger.warn(`Startup cleanup failed: ${err.message}`);
+    }
+}
+
 startMMDetector(handleNewMarket);
 // Immediately check if there's a current active market to enter
 checkCurrentMarket(handleNewMarket);
