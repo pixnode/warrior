@@ -457,6 +457,10 @@ async function monitorUntilFilled(pos, tag, label) {
                 const yesGhost = !config.dryRun && pos.yes.clobFilled && yesShares < pos.targetShares * 0.99;
                 const noGhost  = !config.dryRun && pos.no.clobFilled  && noShares  < pos.targetShares * 0.99;
 
+                if (yesGhost || noGhost) {
+                    if (!pos.ghostFillSince) pos.ghostFillSince = nowMs;
+                    const waitedSec = Math.round((nowMs - pos.ghostFillSince) / 1000);
+
                     if (waitedSec >= 300) {
                         // 5 minutes is way past any RPC delay — it's a permanent ghost fill.
                         logger.error(`MakerMM${tag}: PERMANENT ghost fill (0 tokens after 5m) — giving up on this market`);
