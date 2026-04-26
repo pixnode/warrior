@@ -414,21 +414,63 @@ export async function mergePositions(conditionId, sharesPerSide) {
         6,
     );
 
+    let amountToMerge = amountWei;
+
+    const provider = await getPolygonProvider();
+    const ctf = new ethers.Contract(CTF_ADDRESS, CTF_ABI, provider);
+    
+    try {
+        const [yesId, noId] = await Promise.all([
+            getTokenId(conditionId, 0),
+            getTokenId(conditionId, 1),
+        ]);
+        const [bYes, bNo] = await Promise.all([
+            ctf.balanceOf(config.proxyWallet, yesId),
+            ctf.balanceOf(config.proxyWallet, noId),
+        ]);
+        
+        const minOnchain = bYes.lt(bNo) ? bYes : bNo;
+        if (amountToMerge.gt(minOnchain)) {
+            logger.warn(`MM: merge amount ${ethers.utils.formatUnits(amountToMerge, 6)} exceeds min onchain balance ${ethers.utils.formatUnits(minOnchain, 6)} — adjusting down`);
+            amountToMerge = minOnchain;
+        }
+        if (amountToMerge.isZero()) {
+            logger.warn('MM: no tokens available to merge (on-chain balance is 0)');
+            return 0;
+        }
+    } catch (e) {
+        logger.warn(`MM: merge pre-check failed — ${e.message}`);
+    }
+
     const ctfIface = new ethers.utils.Interface(CTF_ABI);
     const data = ctfIface.encodeFunctionData('mergePositions', [
         USDC_ADDRESS,
         ethers.constants.HashZero,
         conditionId,
         [1, 2],
-        amountWei,
+        amountToMerge,
     ]);
 
-    // Pass explicit gasLimit to bypass eth_estimateGas — Polygon RPC instability
-    // can cause estimateGas to fail even when the tx would succeed onchain.
-    // 500k gas is well above the ~200-250k typically consumed by a Safe+CTF merge.
-    await execSafeCall(CTF_ADDRESS, data, `mergePositions conditionId=${conditionId.slice(0, 10)}...`, { gasLimit: 500_000 });
-    logger.success(`MM: merged — recovered $${sharesPerSide} USDC`);
-    return sharesPerSide;
+    logger.info(`MM: merging ${ethers.utils.formatUnits(amountToMerge, 6)} pairs for condition ${conditionId.slice(0, 12)}...`);
+    await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 800_000 });
+    const recovered = parseFloat(ethers.utils.formatUnits(amountToMerge, 6));
+    logger.success(`MM: merged — recovered $${recovered.toFixed(4)} USDC`);
+    return recovered;
+}
+
+/**
+ * Helper to derive the ERC1155 positionId for a specific condition + outcome.
+ */
+async function getTokenId(conditionId, outcomeIndex) {
+    const collectionId = ethers.utils.solidityKeccak256(
+        ['bytes32', 'bytes32', 'uint256'],
+        [ethers.constants.HashZero, conditionId, 1 << outcomeIndex]
+    );
+    const positionId = ethers.utils.solidityKeccak256(
+        ['address', 'uint256'],
+        [USDC_ADDRESS, collectionId]
+    );
+    return ethers.BigNumber.from(positionId);
 }
 
 /**
