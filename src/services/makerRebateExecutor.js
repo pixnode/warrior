@@ -976,8 +976,9 @@ function notifyProfit(pos, targetShares) {
     const combinedPrice = (pos.yes.buyPrice + pos.no.buyPrice).toFixed(3);
     
     // Notify Telegram
+    logger.info(`MakerMM${tag}: attempting to send profit notification to Telegram...`);
     sendTelegram(
-        `🛡️ WARRIOR: 💰 Profit Cycle Done\n` +
+        `💰 Profit Cycle Done\n` +
         `━━━━━━━━━━━━━━━\n` +
         `🆔 Window: ${pos.question.substring(0, 30)}...\n` +
         `📊 Entry YES: $${pos.yes.buyPrice.toFixed(3)}\n` +

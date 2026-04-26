@@ -7,6 +7,7 @@ import logger from './logger.js';
  */
 export async function sendTelegram(text) {
     if (!config.telegramToken || !config.telegramChatId) {
+        logger.warn('Telegram notification skipped: TELEGRAM_BOT_TOKEN or TELEGRAM_CHAT_ID is not configured.');
         return;
     }
 
