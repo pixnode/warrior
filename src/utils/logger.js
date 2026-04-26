@@ -42,6 +42,17 @@ function sanitizeClobMessage(raw) {
     }
 }
 
+import fs from 'fs';
+import path from 'path';
+
+const LOG_DIR = 'logs';
+const LOG_FILE = path.join(LOG_DIR, 'warrior.log');
+
+// Ensure logs directory exists
+if (!fs.existsSync(LOG_DIR)) {
+    fs.mkdirSync(LOG_DIR);
+}
+
 function ts() {
     return new Date().toISOString().replace('T', ' ').substring(0, 19);
 }
@@ -52,13 +63,24 @@ function stringify(args) {
 
 function log(ansiColor, bColor, emoji, level, ...args) {
     const msg = stringify(args);
+    const timestamp = ts();
+    const fullMsg = `[${timestamp}] ${emoji} ${level} ${msg}`;
+
+    // 1. Write to terminal (with colors/blessed tags)
     if (outputFn) {
         const [open, close] = bColor;
-        outputFn(`{gray-fg}[${ts()}]{/gray-fg} ${open}${emoji} ${level}${close} ${msg}`);
+        outputFn(`{gray-fg}[${timestamp}]{/gray-fg} ${open}${emoji} ${level}${close} ${msg}`);
     } else {
         process.stdout.write(
-            `${A.dim}[${ts()}]${A.reset} ${ansiColor}${emoji} ${level}${A.reset} ${msg}\n`,
+            `${A.dim}[${timestamp}]${A.reset} ${ansiColor}${emoji} ${level}${A.reset} ${msg}\n`,
         );
+    }
+
+    // 2. Append to physical log file (plain text for evaluation)
+    try {
+        fs.appendFileSync(LOG_FILE, fullMsg + '\n');
+    } catch (err) {
+        // Fallback if file system is read-only or error
     }
 }
 
