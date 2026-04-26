@@ -615,7 +615,6 @@ async function executeMerge(pos, shares, tag) {
         pos.status = 'done';
     } catch (err) {
         logger.error(`MakerMM${tag}: merge failed — ${err.message}`);
-        sendTelegram(`⚠️ <b>MERGE FAILED</b>\n${tag}: ${err.message}\nRetrying...`);
         // Don't change status — let monitor loop continue
     }
 }
@@ -809,14 +808,7 @@ export async function executeMakerRebateStrategy(market) {
 
     // ── Place orders ONCE (NO repricing) ──────────────────────
     logger.trade(`MakerMM${tag}: placing BUY — YES $${yesBid} × ${targetShares} + NO $${noBid} × ${targetShares} = $${totalCost.toFixed(2)}`);
-    sendTelegram(
-        `📊 <b>NEW TRADE</b>\n` +
-        `━━━━━━━━━━━━━━━\n` +
-        `🆔 ${question.substring(0, 30)}...\n` +
-        `🛒 YES $${yesBid} + NO $${noBid}\n` +
-        `💰 Total Cost: $${totalCost.toFixed(2)}\n` +
-        `━━━━━━━━━━━━━━━`
-    );
+
 
     const [yesBuy, noBuy] = await Promise.all([
         placeLimitBuy(yesTokenId, targetShares, yesBid, tickSize, negRisk),
