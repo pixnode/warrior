@@ -613,6 +613,11 @@ async function executeMerge(pos, shares, tag) {
     pos.totalProfit = recovered - totalCost;
 
     try {
+        logger.info(`MakerMM${tag}: sending merge transaction to blockchain...`);
+        
+        // Immediate notification that merge is in progress
+        sendTelegram(`⏳ <b>Merge In Progress</b>\n🆔 ${pos.question.substring(0, 20)}...\n📦 ${shares.toFixed(2)} shares`);
+
         await mergePositions(pos.conditionId, shares, pos.yes.tokenId, pos.no.tokenId);
 
         // Orders are already fully filled at this point — no cancel needed
