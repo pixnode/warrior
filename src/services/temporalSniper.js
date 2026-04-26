@@ -14,6 +14,7 @@ import logger from '../utils/logger.js';
 import { getClient } from './client.js';
 import { Side, OrderType } from '@polymarket/clob-client';
 import { sendTelegram } from '../utils/telegram.js';
+import { logToCsv } from '../utils/csvLogger.js';
 
 const activeSnipes = new Map(); // conditionId -> { hasUp, hasDown }
 
@@ -33,6 +34,17 @@ async function fireSnipe(tokenId, side, price, shares, asset, conditionId) {
 
     // Notify Telegram
     sendTelegram(`🎯 <b>Sniper Hit!</b>\nAsset: ${asset.toUpperCase()}\nSide: ${side}\nPrice: $${price.toFixed(3)}\nShares: ${shares}\n${config.dryRun ? '<i>(Simulated)</i>' : ''}`);
+
+    // Log to CSV
+    logToCsv({
+        asset: asset,
+        strategy: 'SNIPER',
+        market: market.question,
+        side: side,
+        price: price,
+        shares: shares,
+        pnl: 0 // Sniper PnL is only known at resolution
+    });
 
     if (config.dryRun) {
         logger.success(`${tag}: [SIM] ${side} order successful (simulated)`);

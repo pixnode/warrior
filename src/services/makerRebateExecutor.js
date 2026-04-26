@@ -13,6 +13,7 @@ import { ethers } from 'ethers';
 import config from '../config/index.js';
 import { getClient, getUsdcBalance, getPolygonProvider } from './client.js';
 import { sendTelegram } from '../utils/telegram.js';
+import { logToCsv } from '../utils/csvLogger.js';
 import { mergePositions, redeemPositions } from './ctf.js';
 import { mmFillWatcher } from './mmWsFillWatcher.js';
 import logger from '../utils/logger.js';
@@ -951,6 +952,17 @@ export async function executeMakerRebateStrategy(market) {
         `📦 <b>Shares  :</b> ${targetShares}\n` +
         `━━━━━━━━━━━━━━━`
     );
+
+    // Log to CSV
+    logToCsv({
+        asset: pos.asset,
+        strategy: 'MM',
+        market: pos.question,
+        side: 'BOTH',
+        price: pos.yes.buyPrice + pos.no.buyPrice,
+        shares: targetShares,
+        pnl: pos.totalProfit
+    });
 
     return { oneSided: pos.oneSided ?? false };
 }
