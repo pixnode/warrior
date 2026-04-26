@@ -105,6 +105,9 @@ async function main() {
             logger.warn('⚠️ DRY RUN MODE ENABLED — No real orders will be placed');
         }
 
+        // Notify startup
+        sendTelegram(`🚀 <b>Engine Started</b>\nMode: ${config.dryRun ? 'SIMULATION' : 'LIVE'}\nAssets: ${config.warriorSniperAssets.join(', ').toUpperCase()}`);
+
         // 1. Start the Orchestrator Loop for Sniper (Fast polling)
         // 500ms for HFT responsiveness in 5m markets
         setInterval(orchestratorLoop, 500);

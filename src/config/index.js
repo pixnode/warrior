@@ -173,6 +173,10 @@ const config = {
   warriorSniperWindowEnd: parseInt(process.env.WARRIOR_SNIPER_WINDOW_END || '20', 10),
   warriorSniperAssets: (process.env.WARRIOR_SNIPER_ASSETS || 'btc,eth,sol')
     .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+
+  // ── Telegram Notifications ─────────────────────────────────────
+  telegramToken: process.env.TELEGRAM_BOT_TOKEN || '',
+  telegramChatId: process.env.TELEGRAM_CHAT_ID || '',
 };
 
 // Validation for warrior bot

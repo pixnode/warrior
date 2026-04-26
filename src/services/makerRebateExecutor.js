@@ -11,7 +11,8 @@
 import { Side, OrderType } from '@polymarket/clob-client';
 import { ethers } from 'ethers';
 import config from '../config/index.js';
-import { getClient, getUsdcBalance, getPolygonProvider } from './client.js';
+import { getClient, getUsdcBalance, getTokenBalance, getPolygonProvider, placeLimitBuy, cancelOrder } from './client.js';
+import { sendTelegram } from '../utils/telegram.js';
 import { mergePositions, redeemPositions } from './ctf.js';
 import { mmFillWatcher } from './mmWsFillWatcher.js';
 import logger from '../utils/logger.js';
@@ -929,6 +930,9 @@ export async function executeMakerRebateStrategy(market) {
 
     const sign = pos.totalProfit >= 0 ? '+' : '';
     logger.info(`MakerMM${tag}: done | P&L: ${sign}$${pos.totalProfit.toFixed(2)}`);
+
+    // Notify Telegram
+    sendTelegram(`💰 <b>Profit Cycle Done</b>\nAsset: ${asset.toUpperCase()}\nP&L: ${sign}$${pos.totalProfit.toFixed(2)}\nTotal Shares: ${targetShares}`);
 
     return { oneSided: pos.oneSided ?? false };
 }

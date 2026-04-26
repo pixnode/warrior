@@ -44,6 +44,16 @@ npm run warrior-tui
 ```
 *Gunakan `npm run warrior-tui-sim` untuk mencoba tampilan dashboard dalam mode simulasi.*
 
+# Install PM2 secara global
+sudo npm install -g pm2
+
+# Jalankan bot Warrior
+pm2 start src/warrior.js --name "warrior"
+
+# Cek log secara real-time
+pm2 logs warrior-bot
+ 
+
 ## 📊 Strategy Overview
 
 ### Maker Rebate MM
