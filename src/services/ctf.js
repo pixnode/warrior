@@ -92,6 +92,7 @@ function parseOnchainError(err) {
 
     // Fallback: extract the first sentence before ethers noise
     const first = msg.split('\n')[0].split('(')[0].trim();
+    if (msg.includes('ExecutionFailure')) return 'Safe execution failed (ExecutionFailure event)';
     return first.length > 120 ? first.slice(0, 120) + '…' : (first || 'Unknown error');
 }
 
@@ -219,6 +220,16 @@ async function _doExecSafeCall(to, data, description = '', gasLimit = undefined)
             );
 
             const receipt = await tx.wait();
+            
+            // Gnosis Safe emits ExecutionSuccess(bytes32 txHash, uint256 payment) or ExecutionFailure(bytes32 txHash, uint256 payment)
+            const successEvent = receipt.events?.find(e => e.event === 'ExecutionSuccess');
+            if (!successEvent) {
+                const failureEvent = receipt.events?.find(e => e.event === 'ExecutionFailure');
+                if (failureEvent) {
+                    throw new Error(`Safe execution failed (inner call reverted) | tx: ${receipt.transactionHash}`);
+                }
+            }
+            
             return receipt;
 
         } catch (err) {
@@ -462,13 +473,19 @@ export async function mergePositions(conditionId, sharesPerSide) {
  * Helper to derive the ERC1155 positionId for a specific condition + outcome.
  */
 async function getTokenId(conditionId, outcomeIndex) {
-    const collectionId = ethers.utils.solidityKeccak256(
-        ['bytes32', 'bytes32', 'uint256'],
-        [ethers.constants.HashZero, conditionId, 1 << outcomeIndex]
+    // collectionId = keccak256(abi.encode(parentCollectionId, conditionId, indexSet))
+    const collectionId = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+            ['bytes32', 'bytes32', 'uint256'],
+            [ethers.constants.HashZero, conditionId, 1 << outcomeIndex]
+        )
     );
-    const positionId = ethers.utils.solidityKeccak256(
-        ['address', 'uint256'],
-        [USDC_ADDRESS, collectionId]
+    // positionId = uint256(keccak256(abi.encode(collateralToken, collectionId)))
+    const positionId = ethers.utils.keccak256(
+        ethers.utils.defaultAbiCoder.encode(
+            ['address', 'uint256'],
+            [USDC_ADDRESS, collectionId]
+        )
     );
     return ethers.BigNumber.from(positionId);
 }
