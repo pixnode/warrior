@@ -601,8 +601,10 @@ export async function cleanupOpenPositions(clobClient) {
             logger.warn(`MM: merging ${minShares.toFixed(3)} YES+NO → USDC for ${conditionId.slice(0, 10)}...`);
 
             if (!config.dryRun) {
-                const yesTokenId = tokens[0]?.tokenId;
-                const noTokenId = tokens[1]?.tokenId;
+                // Robustly derive the correct token IDs for YES (0) and NO (1)
+                const yesTokenId = await getTokenId(conditionId, 0);
+                const noTokenId = await getTokenId(conditionId, 1);
+                
                 await mergePositions(conditionId, minShares, yesTokenId, noTokenId);
                 mergedCount++;
             } else {
