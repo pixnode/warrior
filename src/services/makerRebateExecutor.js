@@ -363,13 +363,20 @@ async function monitorUntilFilled(pos, tag, label) {
             const noShares = parseFloat(Math.max(0, (noBal || 0) - pos.no.baseline).toFixed(6));
 
             // Sync fill flags from onchain (source of truth)
-            if (!pos.yes.filled && yesShares >= pos.targetShares * 0.99) {
-                pos.yes.filled = true;
-                logger.money(`MakerMM${tag}: YES filled (onchain) ${yesShares.toFixed(4)} shares`);
-            }
-            if (!pos.no.filled && noShares >= pos.targetShares * 0.99) {
-                pos.no.filled = true;
-                logger.money(`MakerMM${tag}: NO filled (onchain) ${noShares.toFixed(4)} shares`);
+            if (config.dryRun) {
+                // Simulate partial delay for realism
+                await sleep(2000);
+                if (!pos.yes.filled) { pos.yes.filled = true; logger.money(`MakerMM${tag}: [SIM] YES filled`); }
+                if (!pos.no.filled) { pos.no.filled = true; logger.money(`MakerMM${tag}: [SIM] NO filled`); }
+            } else {
+                if (!pos.yes.filled && yesShares >= pos.targetShares * 0.99) {
+                    pos.yes.filled = true;
+                    logger.money(`MakerMM${tag}: YES filled (onchain) ${yesShares.toFixed(4)} shares`);
+                }
+                if (!pos.no.filled && noShares >= pos.targetShares * 0.99) {
+                    pos.no.filled = true;
+                    logger.money(`MakerMM${tag}: NO filled (onchain) ${noShares.toFixed(4)} shares`);
+                }
             }
 
             // ── Cancel cheap side when expensive fills first ──────────────────────
@@ -443,8 +450,9 @@ async function monitorUntilFilled(pos, tag, label) {
                 // CLOB says order is FILLED but onchain balance < expected after timeout.
                 // Could be full ghost (0 tokens) or partial (some tokens, but not all).
                 // Trigger: either side clobFilled AND onchain short of target after 60s.
-                const yesGhost = pos.yes.clobFilled && yesShares < pos.targetShares * 0.99;
-                const noGhost  = pos.no.clobFilled  && noShares  < pos.targetShares * 0.99;
+                // SKIP GHOST DETECTION IN DRY RUN (as onchain balance never updates)
+                const yesGhost = !config.dryRun && pos.yes.clobFilled && yesShares < pos.targetShares * 0.99;
+                const noGhost  = !config.dryRun && pos.no.clobFilled  && noShares  < pos.targetShares * 0.99;
 
                 if (yesGhost || noGhost) {
                     if (!pos.ghostFillSince) pos.ghostFillSince = nowMs;
