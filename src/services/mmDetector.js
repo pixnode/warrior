@@ -76,6 +76,7 @@ function extractMarketData(market, asset) {
         question: market.question || market.title || '',
         endTime: market.endDate || market.end_date_iso || market.endDateIso,
         eventStartTime: market.eventStartTime || market.event_start_time,
+        marketId: market.id || market.marketId,
         yesTokenId: String(yesTokenId),
         noTokenId: String(noTokenId),
         negRisk: market.negRisk ?? market.neg_risk ?? false,
