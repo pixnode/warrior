@@ -812,7 +812,7 @@ export async function executeMakerRebateStrategy(market) {
     sendTelegram(
         `📊 <b>NEW TRADE</b>\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `🆔 ${pos.question.substring(0, 30)}...\n` +
+        `🆔 ${question.substring(0, 30)}...\n` +
         `🛒 YES $${yesBid} + NO $${noBid}\n` +
         `💰 Total Cost: $${totalCost.toFixed(2)}\n` +
         `━━━━━━━━━━━━━━━`
