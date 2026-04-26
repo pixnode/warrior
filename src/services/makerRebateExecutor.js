@@ -764,15 +764,7 @@ export async function executeMakerRebateStrategy(market) {
             continue;
         }
 
-        // If combined is more than 1 tick below target the market spread is too tight.
-        // Wait for better conditions instead of entering with lower-than-expected profit.
-        const minCombined = parseFloat((config.makerMmMaxCombined - ts).toFixed(4));
-        if (combined < minCombined) {
-            logger.info(`MakerMM${tag}: spread too tight — combined $${combined.toFixed(4)} < target $${config.makerMmMaxCombined} — waiting`);
-            await sleep(POLL_SEC * 1000);
-            continue;
-        }
-
+        // All checks passed — ready to enter
         yesEntryBid = yesBestBid;
         noEntryBid = noBestBid;
 
