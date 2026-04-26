@@ -434,24 +434,6 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
     
     try {
         // Use provided tokenIds directly to check balance
-        const [bYes, bNo] = await Promise.all([
-            ctf.balanceOf(config.proxyWallet, yesTokenId),
-            ctf.balanceOf(config.proxyWallet, noTokenId),
-        ]);
-        
-        const minOnchain = bYes.lt(bNo) ? bYes : bNo;
-        if (amountToMerge.gt(minOnchain)) {
-            logger.warn(`MM: merge amount ${ethers.utils.formatUnits(amountToMerge, 6)} exceeds min onchain balance ${ethers.utils.formatUnits(minOnchain, 6)} — adjusting down`);
-            amountToMerge = minOnchain;
-        }
-        if (amountToMerge.isZero()) {
-            logger.warn('MM: no tokens available to merge (on-chain balance is 0)');
-            return 0;
-        }
-    } catch (e) {
-        logger.warn(`MM: merge pre-check failed — ${e.message}`);
-    }
-
     const ctfIface = new ethers.utils.Interface(CTF_ABI);
     
     // Try Native USDC first, then fall back to USDC.e
@@ -463,17 +445,40 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
     let lastError = null;
     for (const usdc of usdcOptions) {
         try {
+            // Derive the specific token IDs for THIS collateral type
+            const yesId = await getTokenIdWithCollateral(usdc, conditionId, 0);
+            const noId = await getTokenIdWithCollateral(usdc, conditionId, 1);
+
+            // Check balance for THIS specific collateral's tokens
+            const provider = await getPolygonProvider();
+            const ctf = new ethers.Contract(CTF_ADDRESS, CTF_ABI, provider);
+            const [bYes, bNo] = await Promise.all([
+                ctf.balanceOf(config.proxyWallet, yesId),
+                ctf.balanceOf(config.proxyWallet, noId),
+            ]);
+            
+            const minOnchain = bYes.lt(bNo) ? bYes : bNo;
+            let currentAmountToMerge = amountWei;
+            
+            if (currentAmountToMerge.gt(minOnchain)) {
+                currentAmountToMerge = minOnchain;
+            }
+            
+            if (currentAmountToMerge.isZero()) {
+                continue; // Try next collateral if this one has no balance
+            }
+
             logger.info(`MM: attempting merge with collateral ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'}...`);
             const data = ctfIface.encodeFunctionData('mergePositions', [
                 usdc,
                 ethers.constants.HashZero,
                 conditionId,
                 [1, 2],
-                amountToMerge,
+                currentAmountToMerge,
             ]);
 
-            const receipt = await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 2_000_000 });
-            const recovered = parseFloat(ethers.utils.formatUnits(amountToMerge, 6));
+            await execSafeCall(CTF_ADDRESS, data, `mergePositions`, { gasLimit: 2_000_000 });
+            const recovered = parseFloat(ethers.utils.formatUnits(currentAmountToMerge, 6));
             logger.success(`MM: merged with ${usdc === usdcOptions[0] ? 'Native USDC' : 'USDC.e'} — recovered $${recovered.toFixed(4)} USDC`);
             return recovered;
         } catch (err) {
@@ -486,24 +491,26 @@ export async function mergePositions(conditionId, sharesPerSide, yesTokenId, noT
 }
 
 /**
- * Helper to derive the ERC1155 positionId for a specific condition + outcome.
+ * Helper to derive the ERC1155 positionId for a specific collateral + condition + outcome.
  */
-async function getTokenId(conditionId, outcomeIndex) {
-    // collectionId = keccak256(abi.encode(parentCollectionId, conditionId, indexSet))
+async function getTokenIdWithCollateral(collateral, conditionId, outcomeIndex) {
     const collectionId = ethers.utils.keccak256(
         ethers.utils.defaultAbiCoder.encode(
             ['bytes32', 'bytes32', 'uint256'],
             [ethers.constants.HashZero, conditionId, 1 << outcomeIndex]
         )
     );
-    // positionId = uint256(keccak256(abi.encode(collateralToken, collectionId)))
     const positionId = ethers.utils.keccak256(
-        ethers.utils.defaultAbiCoder.encode(
-            ['address', 'uint256'],
-            [USDC_ADDRESS, collectionId]
-        )
+        ethers.utils.defaultAbiCoder.encode(['address', 'bytes32'], [collateral, collectionId])
     );
-    return ethers.BigNumber.from(positionId);
+    return ethers.BigNumber.from(positionId).toString();
+}
+
+/**
+ * Helper to derive the ERC1155 positionId for a specific condition + outcome (uses default Native USDC).
+ */
+async function getTokenId(conditionId, outcomeIndex) {
+    return getTokenIdWithCollateral(USDC_ADDRESS, conditionId, outcomeIndex);
 }
 
 /**
