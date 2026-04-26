@@ -225,12 +225,12 @@ async function recoverFromGhostFill(pos, yesShares, noShares, tag) {
     //      NO=15c filled, YES=83c ghost → sell NO (cheap, small loss acceptable).
     const expSide = pos.yes.buyPrice >= pos.no.buyPrice ? 'yes' : 'no';
 
-    if (yesRemainder >= 1) {
         if (expSide === 'yes') {
             logger.warn(`MakerMM${tag}: ghost recovery — holding YES remainder ${yesRemainder.toFixed(4)} (expensive $${pos.yes.buyPrice}, scheduling redeem after resolution)`);
             pos.holdingSide = 'yes';
         } else {
-            await marketSellToken(pos.yes.tokenId, yesRemainder, pos.tickSize, pos.negRisk, tag);
+            logger.warn(`MakerMM${tag}: ghost recovery — holding YES remainder ${yesRemainder.toFixed(4)} (cheap $${pos.yes.buyPrice}, but Market Sell is DISABLED, scheduling redeem)`);
+            pos.holdingSide = 'yes';
         }
     }
     if (noRemainder >= 1) {
@@ -238,7 +238,8 @@ async function recoverFromGhostFill(pos, yesShares, noShares, tag) {
             logger.warn(`MakerMM${tag}: ghost recovery — holding NO remainder ${noRemainder.toFixed(4)} (expensive $${pos.no.buyPrice}, scheduling redeem after resolution)`);
             pos.holdingSide = 'no';
         } else {
-            await marketSellToken(pos.no.tokenId, noRemainder, pos.tickSize, pos.negRisk, tag);
+            logger.warn(`MakerMM${tag}: ghost recovery — holding NO remainder ${noRemainder.toFixed(4)} (cheap $${pos.no.buyPrice}, but Market Sell is DISABLED, scheduling redeem)`);
+            pos.holdingSide = 'no';
         }
     }
 
@@ -527,9 +528,9 @@ async function monitorUntilFilled(pos, tag, label) {
                 await sleep(backoffSec * 1000);
             }
 
-            // ── Cut-loss check (AFTER balance check) ──────────────────────────
+            // ── Cut-loss check (DISABLED per user request) ──────────────────────────
             const msRemaining = new Date(pos.endTime).getTime() - Date.now();
-            if (msRemaining <= config.makerMmCutLossTime * 1000) {
+            if (false && msRemaining <= config.makerMmCutLossTime * 1000) {
                 logger.warn(`MakerMM${tag}: cut-loss — net YES=${yesShares.toFixed(4)} NO=${noShares.toFixed(4)}`);
 
                 if (yesShares >= 1 && noShares >= 1) {
@@ -868,22 +869,37 @@ export async function executeMakerRebateStrategy(market) {
         if (finalYesBuy.success && finalNoBuy.success) break;
 
         // Cancel existing order before retry to avoid duplicate orders
+        // BUT ONLY IF balance hasn't already increased (double-check balance right now)
         if (!finalYesBuy.success) {
-            logger.warn(`MakerMM${tag}: retrying YES order (attempt ${attempt}/${maxRetries})...`);
-            await cancelOrder(yesBuy.orderId);
-            await sleep(500);
-            finalYesBuy = await placeLimitBuy(yesTokenId, targetShares, yesBid, tickSize, negRisk);
-            if (finalYesBuy.success) {
-                logger.success(`MakerMM${tag}: YES order succeeded on retry ${attempt}`);
+            const currentYesBal = await getTokenBalance(yesTokenId);
+            const currentYesNet = (currentYesBal || 0) - (yesBaseline || 0);
+            if (currentYesNet >= targetShares * 0.5) {
+                logger.success(`MakerMM${tag}: YES fill detected during retry check — skipping duplicate order`);
+                finalYesBuy = { success: true, orderId: yesBuy.orderId || `filled-${Date.now()}` };
+            } else {
+                logger.warn(`MakerMM${tag}: retrying YES order (attempt ${attempt}/${maxRetries})...`);
+                if (yesBuy.orderId) await cancelOrder(yesBuy.orderId);
+                await sleep(500);
+                finalYesBuy = await placeLimitBuy(yesTokenId, targetShares, yesBid, tickSize, negRisk);
+                if (finalYesBuy.success) {
+                    logger.success(`MakerMM${tag}: YES order succeeded on retry ${attempt}`);
+                }
             }
         }
         if (!finalNoBuy.success) {
-            logger.warn(`MakerMM${tag}: retrying NO order (attempt ${attempt}/${maxRetries})...`);
-            await cancelOrder(noBuy.orderId);
-            await sleep(500);
-            finalNoBuy = await placeLimitBuy(noTokenId, targetShares, noBid, tickSize, negRisk);
-            if (finalNoBuy.success) {
-                logger.success(`MakerMM${tag}: NO order succeeded on retry ${attempt}`);
+            const currentNoBal = await getTokenBalance(noTokenId);
+            const currentNoNet = (currentNoBal || 0) - (noBaseline || 0);
+            if (currentNoNet >= targetShares * 0.5) {
+                logger.success(`MakerMM${tag}: NO fill detected during retry check — skipping duplicate order`);
+                finalNoBuy = { success: true, orderId: noBuy.orderId || `filled-${Date.now()}` };
+            } else {
+                logger.warn(`MakerMM${tag}: retrying NO order (attempt ${attempt}/${maxRetries})...`);
+                if (noBuy.orderId) await cancelOrder(noBuy.orderId);
+                await sleep(500);
+                finalNoBuy = await placeLimitBuy(noTokenId, targetShares, noBid, tickSize, negRisk);
+                if (finalNoBuy.success) {
+                    logger.success(`MakerMM${tag}: NO order succeeded on retry ${attempt}`);
+                }
             }
         }
     }
