@@ -12,7 +12,7 @@ import { Side, OrderType } from '@polymarket/clob-client';
 import { ethers } from 'ethers';
 import config from '../config/index.js';
 import { getClient, getUsdcBalance, getPolygonProvider } from './client.js';
-import { sendTelegram } from '../utils/telegram.js';
+import { sendTelegram, escapeHTML } from '../utils/telegram.js';
 import { logToCsv } from '../utils/csvLogger.js';
 import { mergePositions, redeemPositions } from './ctf.js';
 import { mmFillWatcher } from './mmWsFillWatcher.js';
@@ -970,6 +970,7 @@ export async function executeMakerRebateStrategy(market) {
     return { oneSided: pos.oneSided ?? false };
 }
 
+
 /**
  * Sends the final profit report to Telegram and logs to CSV
  */
@@ -986,7 +987,7 @@ function notifyProfit(pos, targetShares) {
     sendTelegram(
         `💰 Profit Cycle Done\n` +
         `━━━━━━━━━━━━━━━\n` +
-        `🆔 Window: ${pos.question.substring(0, 30)}...\n` +
+        `🆔 Window: ${escapeHTML(pos.question.substring(0, 30))}...\n` +
         `📊 Entry YES: $${pos.yes.buyPrice.toFixed(3)}\n` +
         `📊 Entry NO : $${pos.no.buyPrice.toFixed(3)}\n` +
         `💵 Combined: $${combinedPrice}\n` +

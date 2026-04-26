@@ -2,6 +2,17 @@ import config from '../config/index.js';
 import logger from './logger.js';
 
 /**
+ * Escape HTML special characters for Telegram HTML mode
+ */
+export function escapeHTML(str) {
+    if (!str) return '';
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+/**
  * Send a notification to Telegram
  * @param {string} text - The message text
  */
@@ -21,6 +32,8 @@ export async function sendTelegram(text) {
         parse_mode: 'HTML'
     };
 
+    console.log(`[DEBUG] Attempting Telegram send to chat ${config.telegramChatId}...`);
+
     try {
         const response = await fetch(url, {
             method: 'POST',
@@ -30,9 +43,13 @@ export async function sendTelegram(text) {
 
         if (!response.ok) {
             const errData = await response.json();
+            console.log(`[DEBUG] Telegram API Error: ${response.status} - ${JSON.stringify(errData)}`);
             logger.warn(`Telegram API error: ${JSON.stringify(errData)}`);
+        } else {
+            console.log(`[DEBUG] Telegram sent successfully!`);
         }
     } catch (err) {
+        console.log(`[DEBUG] Telegram Fetch Exception: ${err.message}`);
         logger.error(`Failed to send Telegram notification: ${err.message}`);
     }
 }
