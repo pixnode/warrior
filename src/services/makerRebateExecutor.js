@@ -937,10 +937,20 @@ export async function executeMakerRebateStrategy(market) {
     }
 
     const sign = pos.totalProfit >= 0 ? '+' : '';
-    logger.info(`MakerMM${tag}: done | P&L: ${sign}$${pos.totalProfit.toFixed(2)}`);
-
-    // Notify Telegram
-    sendTelegram(`💰 <b>Profit Cycle Done</b>\nAsset: ${asset.toUpperCase()}\nP&L: ${sign}$${pos.totalProfit.toFixed(2)}\nTotal Shares: ${targetShares}`);
+    const combinedPrice = (pos.yes.buyPrice + pos.no.buyPrice).toFixed(3);
+    
+    // Notify Telegram with detailed breakdown
+    sendTelegram(
+        `💰 <b>Profit Cycle Done</b>\n` +
+        `━━━━━━━━━━━━━━━\n` +
+        `🆔 <b>Window:</b> ${pos.question.substring(0, 30)}...\n` +
+        `📊 <b>Entry YES:</b> $${pos.yes.buyPrice.toFixed(3)}\n` +
+        `📊 <b>Entry NO :</b> $${pos.no.buyPrice.toFixed(3)}\n` +
+        `💵 <b>Combined:</b> $${combinedPrice}\n` +
+        `📈 <b>Net P&L :</b> ${sign}$${pos.totalProfit.toFixed(2)}\n` +
+        `📦 <b>Shares  :</b> ${targetShares}\n` +
+        `━━━━━━━━━━━━━━━`
+    );
 
     return { oneSided: pos.oneSided ?? false };
 }
