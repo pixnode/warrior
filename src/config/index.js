@@ -11,6 +11,18 @@ const config = {
   clobApiSecret: process.env.CLOB_API_SECRET || '',
   clobApiPassphrase: process.env.CLOB_API_PASSPHRASE || '',
 
+  // Polymarket API Key Map (proxyWallet -> credentials)
+  polyClobApiKeyMap: (() => {
+    try {
+      return process.env.POLY_CLOB_API_KEY_MAP ? JSON.parse(process.env.POLY_CLOB_API_KEY_MAP) : {};
+    } catch (e) {
+      return {};
+    }
+  })(),
+
+  // Signature Type (0 = EOA, 1 = POLY_GNOSIS_SAFE, 2 = POLY_PROXY)
+  signatureType: process.env.SIGNATURE_TYPE !== undefined ? parseInt(process.env.SIGNATURE_TYPE, 10) : 2,
+
   // Polymarket endpoints
   clobHost: 'https://clob.polymarket.com',
   gammaHost: 'https://gamma-api.polymarket.com',

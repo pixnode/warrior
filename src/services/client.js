@@ -31,7 +31,19 @@ export async function initClient() {
 
     // Step 1: Create temp client to derive API credentials
     let apiCreds;
-    if (config.clobApiKey && config.clobApiSecret && config.clobApiPassphrase) {
+    const credsMap = config.polyClobApiKeyMap || {};
+    const matchedKey = Object.keys(credsMap).find(
+        (k) => k.toLowerCase() === config.proxyWallet.toLowerCase()
+    );
+
+    if (matchedKey && credsMap[matchedKey]) {
+        apiCreds = {
+            key: credsMap[matchedKey].key,
+            secret: credsMap[matchedKey].secret,
+            passphrase: credsMap[matchedKey].passphrase,
+        };
+        logger.info(`Using API credentials from POLY_CLOB_API_KEY_MAP for proxy wallet ${config.proxyWallet}`);
+    } else if (config.clobApiKey && config.clobApiSecret && config.clobApiPassphrase) {
         apiCreds = {
             key: config.clobApiKey,
             secret: config.clobApiSecret,
@@ -46,12 +58,15 @@ export async function initClient() {
 
     // Step 2: Initialize full trading client
     // proxyWallet = funder address (where USDC.e is held)
+    const sigType = config.signatureType !== undefined ? config.signatureType : 2;
+    logger.info(`Using Signature Type: ${sigType}`);
+
     clobClient = new ClobClient(
         config.clobHost,
         config.chainId,
         signer,
         apiCreds,
-        2, // Signature type: 2 = POLY_PROXY (EOA signs on behalf of proxy wallet)
+        sigType, 
         config.proxyWallet, // Funder = proxy wallet (deposit USDC.e here)
     );
 
