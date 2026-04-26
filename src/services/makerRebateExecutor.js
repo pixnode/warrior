@@ -225,6 +225,7 @@ async function recoverFromGhostFill(pos, yesShares, noShares, tag) {
     //      NO=15c filled, YES=83c ghost → sell NO (cheap, small loss acceptable).
     const expSide = pos.yes.buyPrice >= pos.no.buyPrice ? 'yes' : 'no';
 
+    if (yesRemainder >= 1) {
         if (expSide === 'yes') {
             logger.warn(`MakerMM${tag}: ghost recovery — holding YES remainder ${yesRemainder.toFixed(4)} (expensive $${pos.yes.buyPrice}, scheduling redeem after resolution)`);
             pos.holdingSide = 'yes';
