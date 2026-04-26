@@ -18,7 +18,7 @@ import { mergePositions, redeemPositions } from './ctf.js';
 import { mmFillWatcher } from './mmWsFillWatcher.js';
 import logger from '../utils/logger.js';
 
-const CTF_ADDRESS = '0x4D97DCd97eC945f40cF65F87097ACe5EA0476045';
+const CTF_ADDRESS = '0x4D97Df1706A066231d27937A092323f46f3a8e97';
 const CTF_BALANCE_ABI = ['function balanceOf(address account, uint256 id) view returns (uint256)'];
 const CLOB_MIN_ORDER_SHARES = 5;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
