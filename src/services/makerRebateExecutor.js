@@ -11,7 +11,7 @@
 import { Side, OrderType } from '@polymarket/clob-client';
 import { ethers } from 'ethers';
 import config from '../config/index.js';
-import { getClient, getUsdcBalance, getTokenBalance, getPolygonProvider, cancelOrder } from './client.js';
+import { getClient, getUsdcBalance, getPolygonProvider } from './client.js';
 import { sendTelegram } from '../utils/telegram.js';
 import { mergePositions, redeemPositions } from './ctf.js';
 import { mmFillWatcher } from './mmWsFillWatcher.js';
