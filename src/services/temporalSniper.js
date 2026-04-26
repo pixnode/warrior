@@ -22,7 +22,8 @@ const firedSnipes = new Set(); // Set of "conditionId-side" to ensure absolute 1
 /**
  * Track the outcome of a snipe after the market closes
  */
-async function trackSnipeOutcome(market, side, buyPrice, shares) {
+async function trackSnipeOutcome(market, side, buyPrice, shares, retryCount = 0) {
+    const MAX_OUTCOME_RETRIES = 5;
     const { asset, conditionId, endTime, question } = market;
     const tag = `[SNIPER-${asset.toUpperCase()}]`;
     
@@ -40,8 +41,12 @@ async function trackSnipeOutcome(market, side, buyPrice, shares) {
 
         const response = await proxyFetch(url);
         if (!response.ok) {
-            logger.warn(`${tag}: Failed to fetch market status (${response.status}) — retrying in 60s`);
-            setTimeout(() => trackSnipeOutcome(market, side, buyPrice, shares), 60000);
+            if (retryCount < MAX_OUTCOME_RETRIES) {
+                logger.warn(`${tag}: Failed to fetch market status (${response.status}) — retry ${retryCount + 1}/${MAX_OUTCOME_RETRIES} in 60s`);
+                setTimeout(() => trackSnipeOutcome(market, side, buyPrice, shares, retryCount + 1), 60000);
+            } else {
+                logger.error(`${tag}: Outcome tracking abandoned after ${MAX_OUTCOME_RETRIES} retries (API error)`);
+            }
             return;
         }
 
@@ -81,9 +86,12 @@ async function trackSnipeOutcome(market, side, buyPrice, shares) {
                 pnl: pnl
             });
         } else {
-            // Not yet resolved, retry once in 60s
-            logger.info(`${tag}: Market not yet resolved, retrying in 60s...`);
-            setTimeout(() => trackSnipeOutcome(market, side, buyPrice, shares), 60000);
+            if (retryCount < MAX_OUTCOME_RETRIES) {
+                logger.info(`${tag}: Market not yet resolved — retry ${retryCount + 1}/${MAX_OUTCOME_RETRIES} in 60s...`);
+                setTimeout(() => trackSnipeOutcome(market, side, buyPrice, shares, retryCount + 1), 60000);
+            } else {
+                logger.warn(`${tag}: Outcome tracking abandoned after ${MAX_OUTCOME_RETRIES} retries (not resolved)`);
+            }
         }
     } catch (err) {
         logger.error(`${tag}: Failed to track outcome — ${err.message}`);
@@ -186,5 +194,6 @@ export async function evaluateSnipe(market, event) {
 }
 
 export function clearSniperState(conditionId) {
-    activeSnipes.delete(conditionId);
+    firedSnipes.delete(`${conditionId}-UP`);
+    firedSnipes.delete(`${conditionId}-DOWN`);
 }

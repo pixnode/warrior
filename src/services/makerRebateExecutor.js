@@ -679,7 +679,7 @@ export async function executeMakerRebateStrategy(market) {
     const entryNotBefore = marketOpenTime + ENTRY_DELAY_MS;
     const waitMs = entryNotBefore - Date.now();
     if (waitMs > 0) {
-        logger.info(`MakerMM${tag}: ${sim}waiting ${Math.round(waitMs / 1000)}s for market to stabilize (open +10s)...`);
+        logger.info(`MakerMM${tag}: ${sim}waiting ${Math.round(waitMs / 1000)}s for market to stabilize (open +5s)...`);
         await sleep(waitMs);
     }
 
