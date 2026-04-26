@@ -617,7 +617,6 @@ async function executeMerge(pos, shares, tag) {
         logger.info(`MakerMM${tag}: sending merge transaction to blockchain...`);
         
         // Send profit notification IMMEDIATELY after fill detection to provide instant feedback
-        console.log(`[DEBUG] MakerMM${tag}: Triggering notifyProfit for ${pos.question.substring(0, 20)}...`);
         notifyProfit(pos, pos.targetShares);
 
         await mergePositions(pos.conditionId, shares, pos.yes.tokenId, pos.no.tokenId);

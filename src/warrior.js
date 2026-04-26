@@ -63,7 +63,7 @@ async function onNewMarket(market) {
     if (activeMarkets.has(conditionId)) return;
     
     logger.info(`${tag}: New market discovered — "${question.slice(0, 40)}..."`);
-    sendTelegram(`🆕 <b>Market Detected</b>\nAsset: ${asset.toUpperCase()}\n${question.substring(0, 50)}...`);
+    // sendTelegram(`🆕 <b>Market Detected</b>\nAsset: ${asset.toUpperCase()}\n${question.substring(0, 50)}...`);
     activeMarkets.set(conditionId, market);
 
     // Run strategies in parallel
@@ -108,7 +108,7 @@ async function main() {
         }
 
         // Notify startup
-        sendTelegram(`🚀 <b>Engine Started</b>\nMode: ${config.dryRun ? 'SIMULATION' : 'LIVE'}\nAssets: ${config.warriorSniperAssets.join(', ').toUpperCase()}`);
+        // sendTelegram(`🚀 <b>Engine Started</b>\nMode: ${config.dryRun ? 'SIMULATION' : 'LIVE'}\nAssets: ${config.warriorSniperAssets.join(', ').toUpperCase()}`);
 
         // 1. Start the Orchestrator Loop for Sniper (Fast polling)
         // 500ms for HFT responsiveness in 5m markets
